@@ -3,7 +3,6 @@
 > - AI-Powered Full-Stack Website Builder**
 
 [![GitHub stars](https://img.shields.io/github/stars/HemaSagarKoppusetti/ai-website-builder?style=social)](https://github.com/HemaSagarKoppusetti/ai-website-builder)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat&logo=next.js&logoColor=white)](https://nextjs.org/)
 [![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=flat&logo=openai&logoColor=white)](https://openai.com/)
