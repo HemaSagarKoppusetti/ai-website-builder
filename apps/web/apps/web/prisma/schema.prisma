@@ -1,0 +1,457 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// User Management
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  image         String?
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Authentication
+  accounts Account[]
+  sessions Session[]
+
+  // User Profile
+  profile UserProfile?
+
+  // Projects and Collaboration
+  projects              Project[]
+  collaborations        ProjectCollaborator[]
+  projectInvitations    ProjectInvitation[]
+  
+  // AI Usage and Billing
+  aiUsage               AIUsage[]
+  subscription          Subscription?
+  
+  // Activity and Analytics
+  activities            UserActivity[]
+  
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verificationtokens")
+}
+
+model UserProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  bio             String?
+  company         String?
+  website         String?
+  location        String?
+  timezone        String?
+  preferences     Json     @default("{}")
+  onboardingStep  Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+// Project Management
+model Project {
+  id          String        @id @default(cuid())
+  name        String
+  slug        String        @unique
+  description String?
+  thumbnail   String?
+  isPublic    Boolean       @default(false)
+  status      ProjectStatus @default(DRAFT)
+  settings    Json          @default("{}")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Ownership
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Content
+  pages         Page[]
+  assets        Asset[]
+  components    ComponentInstance[]
+  
+  // Collaboration
+  collaborators ProjectCollaborator[]
+  invitations   ProjectInvitation[]
+  
+  // Versioning
+  versions      ProjectVersion[]
+  
+  // Deployment
+  deployments   Deployment[]
+  
+  // Analytics
+  analytics     ProjectAnalytics?
+
+  @@map("projects")
+}
+
+enum ProjectStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model ProjectCollaborator {
+  id        String             @id @default(cuid())
+  projectId String
+  userId    String
+  role      CollaboratorRole   @default(VIEWER)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@map("project_collaborators")
+}
+
+enum CollaboratorRole {
+  OWNER
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+model ProjectInvitation {
+  id        String             @id @default(cuid())
+  projectId String
+  email     String
+  role      CollaboratorRole   @default(VIEWER)
+  token     String             @unique
+  expiresAt DateTime
+  createdAt DateTime           @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [email], references: [email])
+
+  @@unique([projectId, email])
+  @@map("project_invitations")
+}
+
+// Page and Component Management
+model Page {
+  id          String   @id @default(cuid())
+  projectId   String
+  name        String
+  slug        String
+  path        String
+  title       String?
+  description String?
+  isHomePage  Boolean  @default(false)
+  settings    Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project    Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  components ComponentInstance[]
+
+  @@unique([projectId, slug])
+  @@map("pages")
+}
+
+model ComponentInstance {
+  id         String   @id @default(cuid())
+  projectId  String
+  pageId     String?
+  parentId   String?
+  name       String
+  type       String
+  category   String
+  props      Json     @default("{}")
+  styles     Json     @default("{}")
+  position   Json     @default("{}")
+  isLocked   Boolean  @default(false)
+  isHidden   Boolean  @default(false)
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  project  Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  page     Page?               @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  parent   ComponentInstance?  @relation("ComponentHierarchy", fields: [parentId], references: [id])
+  children ComponentInstance[] @relation("ComponentHierarchy")
+
+  @@map("component_instances")
+}
+
+// Asset Management
+model Asset {
+  id          String    @id @default(cuid())
+  projectId   String
+  name        String
+  url         String
+  type        AssetType
+  size        Int?
+  mimeType    String?
+  alt         String?
+  metadata    Json      @default("{}")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("assets")
+}
+
+enum AssetType {
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+  FONT
+  OTHER
+}
+
+// Version Control
+model ProjectVersion {
+  id          String   @id @default(cuid())
+  projectId   String
+  version     String
+  name        String?
+  description String?
+  data        Json
+  createdAt   DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, version])
+  @@map("project_versions")
+}
+
+// Deployment
+model Deployment {
+  id           String           @id @default(cuid())
+  projectId    String
+  versionId    String?
+  platform     DeploymentPlatform
+  status       DeploymentStatus @default(PENDING)
+  url          String?
+  buildId      String?
+  buildUrl     String?
+  previewUrl   String?
+  domain       String?
+  environment  Json             @default("{}")
+  logs         String[]         @default([])
+  deployedAt   DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("deployments")
+}
+
+enum DeploymentPlatform {
+  VERCEL
+  NETLIFY
+  AWS
+  GITHUB_PAGES
+  FIREBASE
+  CUSTOM
+}
+
+enum DeploymentStatus {
+  PENDING
+  BUILDING
+  DEPLOYED
+  FAILED
+  CANCELLED
+}
+
+// AI Features
+model AIUsage {
+  id               String    @id @default(cuid())
+  userId           String
+  type             AIUsageType
+  model            String?
+  tokensUsed       Int       @default(0)
+  cost             Float     @default(0.0)
+  requestData      Json?
+  responseData     Json?
+  processingTimeMs Int?
+  createdAt        DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ai_usage")
+}
+
+enum AIUsageType {
+  CONTENT_GENERATION
+  CODE_GENERATION
+  IMAGE_GENERATION
+  CHAT_ASSISTANCE
+  STYLE_SUGGESTION
+  OPTIMIZATION
+}
+
+// Subscription and Billing
+model Subscription {
+  id                String            @id @default(cuid())
+  userId            String            @unique
+  stripeCustomerId  String?           @unique
+  stripePriceId     String?
+  stripeCurrentPeriodEnd DateTime?
+  plan              SubscriptionPlan  @default(FREE)
+  status            SubscriptionStatus @default(ACTIVE)
+  features          Json              @default("{}")
+  limits            Json              @default("{}")
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+enum SubscriptionPlan {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  PAST_DUE
+}
+
+// Analytics
+model ProjectAnalytics {
+  id          String   @id @default(cuid())
+  projectId   String   @unique
+  pageViews   Int      @default(0)
+  uniqueUsers Int      @default(0)
+  deployments Int      @default(0)
+  lastVisited DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("project_analytics")
+}
+
+// Activity Logging
+model UserActivity {
+  id          String       @id @default(cuid())
+  userId      String
+  type        ActivityType
+  description String
+  metadata    Json         @default("{}")
+  createdAt   DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_activities")
+}
+
+enum ActivityType {
+  LOGIN
+  LOGOUT
+  PROJECT_CREATED
+  PROJECT_UPDATED
+  PROJECT_DELETED
+  PROJECT_DEPLOYED
+  COMPONENT_ADDED
+  COMPONENT_UPDATED
+  COMPONENT_DELETED
+  AI_USAGE
+  COLLABORATION_INVITED
+  COLLABORATION_JOINED
+  SUBSCRIPTION_CHANGED
+}
+
+// Templates and Marketplace
+model Template {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  thumbnail   String?
+  category    String
+  tags        String[]
+  data        Json
+  isPublic    Boolean  @default(false)
+  isPremium   Boolean  @default(false)
+  price       Float?
+  downloads   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Author (optional, for community templates)
+  authorId String?
+  author   User?  @relation(fields: [authorId], references: [id])
+
+  @@map("templates")
+}
+
+// WebHooks for external integrations
+model WebHook {
+  id        String      @id @default(cuid())
+  projectId String?
+  url       String
+  events    String[]
+  secret    String?
+  isActive  Boolean     @default(true)
+  lastUsed  DateTime?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@map("webhooks")
+}

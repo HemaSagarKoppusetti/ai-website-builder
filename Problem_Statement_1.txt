@@ -1,0 +1,21 @@
+HackWithHyderabad Hackathon Problem Statements
+1. AI-Powered Full-Stack Website & Backend Builder for Non-Technical Founders
+Background
+In the startup ecosystem, many early-stage founders and entrepreneurs have innovative ideas but lack the technical expertise to develop and launch their products. Existing no-code platforms like Framer or Webflow offer drag-and-drop design capabilities but do not provide full ownership of frontend and backend code. Meanwhile, AI code generators like v0 and Bold lack a visual canvas or comprehensive end-to-end functionality for deployment. There is a critical need for a platform that combines visual design, AI-driven code generation, backend logic creation, and seamless deployment to empower non-technical users.
+Challenge
+Develop a prototype of a platform that enables non-technical users to create and deploy full-stack web applications using intuitive drag-and-drop tools integrated with AI-assisted code generation.
+Key Features
+* Frontend Design: Enable users to design the frontend visually using a canvas or block-based system.
+* Code Generation: Automatically generate production-ready frontend code (e.g., HTML, CSS, JavaScript, or React).
+* Backend Development: Use AI to generate backend APIs, database models, and authentication flows.
+* Deployment: Allow users to preview, edit, and deploy the full application (frontend, backend, and database) with minimal effort.
+* Optional Features:
+o AI chat assistant to assist with edits.
+o Database schema visualizer and backend logic builder.
+o One-click deployment to platforms like Vercel, Render, or Supabase.
+o Ability to upload code snippets and convert them into visual components.
+Objective
+Build a Minimum Viable Product (MVP) focused on simplicity, usability, and real functionality, tailored for users with zero coding knowledge.
+Focus Areas
+No-Code Platforms, AI Code Generation, Full-Stack Development
+
